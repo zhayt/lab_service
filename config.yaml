@@ -1,0 +1,14 @@
+app:
+  host: localhost
+  port: 8080
+  mode: dev
+
+db:
+  driver: mysql
+  protocol: https
+  url: localhost
+  port: 3306
+  user: qwerty
+  password: qwerty
+  database: db
+
