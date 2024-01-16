@@ -6,8 +6,8 @@ Create server to store and get inodes.
 Inodes is linux file system entity that store metadata about file: [link](https://www.bluematador.com/blog/what-is-an-inode-and-what-are-they-used-for)
 
 ### Endpoints
-- /api/v1/user [POST] to save inode
-- /api/v1/user [GET] to get inode
+- /api/v1/inode [POST] to save inode
+- /api/v1/inode/{:id} [GET] to get inode
 
 ### Index Node (inode) entity should contain the following fields
 
