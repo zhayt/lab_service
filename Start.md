@@ -1,1 +1,1 @@
-# An inode is a file data structure that stores inforation about any Linux file
+# An inode is a file data structure that stores information about any Linux file
