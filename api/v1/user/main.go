@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/golangcollege/sessions"
@@ -13,16 +14,16 @@ import (
 )
 
 type Inode struct {
-	ID               int       `json:"id"`
-	Name             string    `json:"file_name"`
-	Path             string    `json:"filepath"`
-	Type             string    `json:"file_type"`
-	Mode             string    `json:"mode"`
-	Uid              int       `json:"uid"`
-	Gid              int       `json:"gid"`
-	Number_of_Blocks int       `json:"num_of_blocks"`
-	Size             int       `json:"size"`
-	Timestamp        time.Time `json:"timestamp"`
+	ID             uint64    `json:"id"`
+	Name           string    `json:"file_name"`
+	Path           string    `json:"filepath"`
+	Type           string    `json:"file_type"`
+	Mode           string    `json:"mode"`
+	UID            uint64    `json:"uid"`
+	GID            uint64    `json:"gid"`
+	NumberOfBlocks uint64    `json:"num_of_blocks"`
+	Size           uint64    `json:"size"`
+	Timestamp      time.Time `json:"timestamp"`
 }
 
 var inodes []Inode
@@ -47,9 +48,11 @@ type application struct {
 }
 
 func (app *application) GetInode(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	id, _ := strconv.Atoi(r.URL.Query().Get("id"))
 	for _, inode := range inodes {
-		if fmt.Sprint(inode.ID) == id {
+		if inode.ID == uint64(id) {
+			// The fmt.Sprint() function in Go language formats
+			//using the default formats for its operands and returns the resulting string.
 			json.NewEncoder(w).Encode(inode)
 			return
 		}
@@ -60,18 +63,19 @@ func (app *application) GetInode(w http.ResponseWriter, r *http.Request) {
 func main() {
 	app := &application{}
 	mux := mux.NewRouter()
-	mux.HandleFunc("/save", app.PostInode).Methods("POST")
-	mux.HandleFunc("/parse", app.GetInode).Methods("GET")
+	mux.HandleFunc("/api/v1/user", app.PostInode).Methods("POST")
+	mux.HandleFunc("/api/v1/user", app.GetInode).Methods("GET")
 
 	http.Handle("/", mux)
 
 	port := 8080
-	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	// use log.New() to create a logger for wr	iting information messages
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	// use stderr for writing error messages
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
-	infoLog.Printf("Starting server on %d", 8080)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", 8080), nil)
+	infoLog.Printf("Starting server on %d", port)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	errorLog.Fatal(err)
 }
+
+//func init инициализируется до мейн функции
