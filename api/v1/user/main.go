@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/golangcollege/sessions"
@@ -15,7 +16,7 @@ import (
 
 type Inode struct {
 	ID             uint64    `json:"id"`
-	Name           string    `json:"file_name"`
+	FileName       string    `json:"file_name"`
 	Path           string    `json:"filepath"`
 	Type           string    `json:"file_type"`
 	Mode           string    `json:"mode"`
@@ -27,16 +28,22 @@ type Inode struct {
 }
 
 var inodes []Inode
+var hashmap map[uint64]Inode
 
-func (app *application) PostInode(w http.ResponseWriter, r *http.Request) {
-	var newStruct Inode
-	err := json.NewDecoder(r.Body).Decode(&newStruct)
+func (app *application) SaveInode(w http.ResponseWriter, r *http.Request) {
+	var NewInode Inode
+	err := json.NewDecoder(r.Body).Decode(&NewInode)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-	newStruct.Timestamp = time.Now()
-	inodes = append(inodes, newStruct)
+	NewInode.Timestamp = time.Now()
+
+	var mu sync.Mutex
+	mu.Lock()
+	inodes = append(inodes, NewInode)
+	hashmap[NewInode.ID] = NewInode
+	mu.Unlock()
 
 	w.WriteHeader(http.StatusCreated)
 }
@@ -47,12 +54,20 @@ type application struct {
 	session  *sessions.Session
 }
 
-func (app *application) GetInode(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.Atoi(r.URL.Query().Get("id"))
+func (app *application) ParseInode(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
 	for _, inode := range inodes {
 		if inode.ID == uint64(id) {
-			// The fmt.Sprint() function in Go language formats
-			//using the default formats for its operands and returns the resulting string.
+			json.NewEncoder(w).Encode(inode)
+			return
+		}
+	}
+	for _, inode := range hashmap {
+		if inode == hashmap[uint64(id)] {
 			json.NewEncoder(w).Encode(inode)
 			return
 		}
@@ -63,19 +78,20 @@ func (app *application) GetInode(w http.ResponseWriter, r *http.Request) {
 func main() {
 	app := &application{}
 	mux := mux.NewRouter()
-	mux.HandleFunc("/api/v1/user", app.PostInode).Methods("POST")
-	mux.HandleFunc("/api/v1/user", app.GetInode).Methods("GET")
+	mux.HandleFunc("/api/v1/user", app.SaveInode).Methods("POST")
+	mux.HandleFunc("/api/v1/user", app.ParseInode).Methods("GET")
 
 	http.Handle("/", mux)
 
 	port := 8080
-	// use log.New() to create a logger for wr	iting information messages
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	// use stderr for writing error messages
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	infoLog.Printf("Starting server on %d", port)
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-	errorLog.Fatal(err)
+	if err != nil {
+		errorLog.Printf("Error is discovered %s", err)
+		return
+	}
 }
 
 //func init инициализируется до мейн функции
