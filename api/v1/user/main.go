@@ -27,8 +27,8 @@ type Inode struct {
 	Timestamp      time.Time `json:"timestamp"`
 }
 
-var inodes []Inode
-var hashmap map[uint64]Inode
+var inodes = make([]Inode, 0, 1000)
+var InodesMap = make(map[uint64]Inode)
 
 func (app *application) SaveInode(w http.ResponseWriter, r *http.Request) {
 	var NewInode Inode
@@ -42,7 +42,7 @@ func (app *application) SaveInode(w http.ResponseWriter, r *http.Request) {
 	var mu sync.Mutex
 	mu.Lock()
 	inodes = append(inodes, NewInode)
-	hashmap[NewInode.ID] = NewInode
+	InodesMap[NewInode.ID] = NewInode
 	mu.Unlock()
 
 	w.WriteHeader(http.StatusCreated)
@@ -66,11 +66,10 @@ func (app *application) ParseInode(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	for _, inode := range hashmap {
-		if inode == hashmap[uint64(id)] {
-			json.NewEncoder(w).Encode(inode)
-			return
-		}
+	inode, exists := InodesMap[uint64(id)]
+	if exists {
+		json.NewEncoder(w).Encode(inode)
+		return
 	}
 	http.NotFound(w, r)
 }
